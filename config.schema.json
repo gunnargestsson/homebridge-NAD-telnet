@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "ExampleHomebridgePlugin",
+  "pluginAlias": "NADHomebridgePlugin",
   "pluginType": "platform",
   "singular": true,
   "schema": {
@@ -7,9 +7,36 @@
     "properties": {
       "name": {
         "title": "Name",
+        "description": "The name of your NAD in HomeKit",
         "type": "string",
         "required": true,
-        "default": "Example Dynamic Platform"
+        "default": "NAD Amplifer"
+      },
+      "model": {
+        "title": "Model",
+        "description": "The model of your NAD",
+        "type": "string",
+        "required": false,
+        "default": ""
+      },
+      "serialNumber": {
+        "title": "Serial Number",
+        "description": "The serial number of your NAD",
+        "type": "string",
+        "required": false
+      },            
+      "ip": {
+        "title": "IP / Hostname",
+        "description": "The IP address or host name of your NAD, find or set in your router",
+        "type": "string",
+        "required": true
+      },
+      "port": {
+        "title": "Port",
+        "description": "Telnet port of your NAD",
+        "placeholder": "23",
+        "type": "number",
+        "required": false
       }
     }
   }

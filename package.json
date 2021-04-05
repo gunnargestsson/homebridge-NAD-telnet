@@ -1,16 +1,16 @@
 {
-  "private": true,
-  "displayName": "Plugin Name",
-  "name": "homebridge-plugin-name",
-  "version": "1.0.0",
-  "description": "A short description about what your plugin does.",
+  "private": false,
+  "displayName": "NAD Amplifier via Telnet",
+  "name": "homebridge-nad-telnet",
+  "version": "1.0.3",
+  "description": "Connect to NAD amplifier via Telnet.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git://github.com/USERNAME/GITHUB_PROJECT_NAME.git"
+    "url": "git://github.com/gunnargestsson/homebridge-NAD-telnet.git"
   },
   "bugs": {
-    "url": "https://github.com/USERNAME/GITHUB_PROJECT_NAME/issues"
+    "url": "https://github.com/gunnargestsson/homebridge-NAD-telnet/issues"
   },
   "engines": {
     "node": ">=10.17.0",
@@ -24,18 +24,22 @@
     "prepublishOnly": "npm run lint && npm run build"
   },
   "keywords": [
-    "homebridge-plugin"
+    "homebridge-plugin",
+    "NAD",
+    "telnet"
   ],
-  "dependencies": {},
+  "dependencies": {
+    "net": "^1.0.2"
+  },
   "devDependencies": {
-    "@types/node": "^14.14.31",
-    "@typescript-eslint/eslint-plugin": "^4.16.1",
-    "@typescript-eslint/parser": "^4.16.1",
-    "eslint": "^7.21.0",
-    "homebridge": "^1.3.1",
+    "@types/node": "^14.14.37",
+    "@typescript-eslint/eslint-plugin": "^4.20.0",
+    "@typescript-eslint/parser": "^4.20.0",
+    "eslint": "^7.23.0",
+    "homebridge": "^1.3.4",
     "nodemon": "^2.0.7",
     "rimraf": "^3.0.2",
     "ts-node": "^9.1.1",
-    "typescript": "^4.2.2"
+    "typescript": "^4.2.3"
   }
 }
