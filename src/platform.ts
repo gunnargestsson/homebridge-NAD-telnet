@@ -54,7 +54,7 @@ export class NADHomebridgePlatform implements DynamicPlatformPlugin {
     // EXAMPLE ONLY
     // A real plugin you would discover accessories from the local network, cloud services
     // or a user-defined array in the platform config.
-    const exampleDevices = [
+    const NADDevices = [
       {
         NADUniqueId: 'hap-nodejs:accessories:nav-amplifer',
         NADDisplayName: 'NAD Amplifier',
@@ -62,7 +62,7 @@ export class NADHomebridgePlatform implements DynamicPlatformPlugin {
     ];
 
     // loop over the discovered devices and register each one if it has not already been registered
-    for (const device of exampleDevices) {
+    for (const device of NADDevices) {
 
       // generate a unique id for the accessory this should be generated from
       // something globally unique, but constant, for example, the device serial
