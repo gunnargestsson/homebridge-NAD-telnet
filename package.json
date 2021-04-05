@@ -29,7 +29,7 @@
     "telnet"
   ],
   "dependencies": {
-    "net": "^1.0.2"
+    "telnet-client": "^1.4.9"
   },
   "devDependencies": {
     "@types/node": "^14.14.37",

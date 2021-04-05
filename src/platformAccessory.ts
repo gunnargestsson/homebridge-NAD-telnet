@@ -3,6 +3,8 @@ import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
 
 import { NADHomebridgePlatform } from './platform';
 
+import telnet from 'telnet-client';
+
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
@@ -31,6 +33,11 @@ export class NADPlatformAccessory {
     Mute: false,
     Volume : 0,
     SelectedInput: 1,
+  };
+
+  private NADConnect = {
+    Host: this.platform.config.ip,
+    Port: parseInt(this.platform.config.port) || 23,
   };
 
   constructor(
@@ -343,4 +350,5 @@ export class NADPlatformAccessory {
     this.NADStates.Volume = value as number;
     this.platform.log.debug('Set Characteristic Volume -> ', value);
   }
+
 }
