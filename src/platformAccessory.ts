@@ -3,7 +3,7 @@ import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
 
 import { NADHomebridgePlatform } from './platform';
 
-import telnet from 'telnet-client';
+//import telnet from 'telnet-client';
 
 /**
  * Platform Accessory
@@ -13,15 +13,15 @@ import telnet from 'telnet-client';
 export class NADPlatformAccessory {
   private power: Service;
   private speaker: Service;
-  private input1: Service;
-  private input2: Service;
-  private input3: Service;
-  private input4: Service;
-  private input5: Service;
-  private input6: Service;
-  private input7: Service;
-  private input8: Service;
-  private input9: Service;
+  private input1: Service | undefined;
+  private input2: Service | undefined;
+  private input3: Service | undefined;
+  private input4: Service | undefined;
+  private input5: Service | undefined;
+  private input6: Service | undefined;
+  private input7: Service | undefined;
+  private input8: Service | undefined;
+  private input9: Service | undefined;
   private inputs = this.platform.config.inputs || [];
 
   /**
@@ -84,111 +84,93 @@ export class NADPlatformAccessory {
 
     if (this.inputs.find(i => i.number === 1)) {
       inputName = this.inputs.find(i => i.number === 1).name;
-    } else {
-      inputName = 'Input 1';
+      this.platform.log.debug('Adding input switch service: ', inputName);
+      this.input1 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input1');
+      this.input1.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
+      this.input1.getCharacteristic(this.platform.Characteristic.On)
+        .onSet(this.setInput1On.bind(this))
+        .onGet(this.getInput1On.bind(this));
     }
-    this.platform.log.debug('Adding input switch service: ', inputName);
-    this.input1 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input1');
-    this.input1.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
-    this.input1.getCharacteristic(this.platform.Characteristic.On)
-      .onSet(this.setInput1On.bind(this))
-      .onGet(this.getInput1On.bind(this));
 
     if (this.inputs.find(i => i.number === 2)) {
       inputName = this.inputs.find(i => i.number === 2).name;
-    } else {
-      inputName = 'Input 2';
+      this.platform.log.debug('Adding input switch service: ', inputName);
+      this.input2 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input2');
+      this.input2.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
+      this.input2.getCharacteristic(this.platform.Characteristic.On)
+        .onSet(this.setInput2On.bind(this))
+        .onGet(this.getInput2On.bind(this));
     }
-    this.platform.log.debug('Adding input switch service: ', inputName);
-    this.input2 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input2');
-    this.input2.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
-    this.input2.getCharacteristic(this.platform.Characteristic.On)
-      .onSet(this.setInput2On.bind(this))
-      .onGet(this.getInput2On.bind(this));
 
     if (this.inputs.find(i => i.number === 3)) {
       inputName = this.inputs.find(i => i.number === 3).name;
-    } else {
-      inputName = 'Input 3';
+      this.platform.log.debug('Adding input switch service: ', inputName);
+      this.input3 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input3');
+      this.input3.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
+      this.input3.getCharacteristic(this.platform.Characteristic.On)
+        .onSet(this.setInput3On.bind(this))
+        .onGet(this.getInput3On.bind(this));
     }
-    this.platform.log.debug('Adding input switch service: ', inputName);
-    this.input3 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input3');
-    this.input3.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
-    this.input3.getCharacteristic(this.platform.Characteristic.On)
-      .onSet(this.setInput3On.bind(this))
-      .onGet(this.getInput3On.bind(this));
 
     if (this.inputs.find(i => i.number === 4)) {
       inputName = this.inputs.find(i => i.number === 4).name;
-    } else {
-      inputName = 'Input 4';
+      this.platform.log.debug('Adding input switch service: ', inputName);
+      this.input4 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input4');
+      this.input4.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
+      this.input4.getCharacteristic(this.platform.Characteristic.On)
+        .onSet(this.setInput4On.bind(this))
+        .onGet(this.getInput4On.bind(this));
     }
-    this.platform.log.debug('Adding input switch service: ', inputName);
-    this.input4 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input4');
-    this.input4.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
-    this.input4.getCharacteristic(this.platform.Characteristic.On)
-      .onSet(this.setInput4On.bind(this))
-      .onGet(this.getInput4On.bind(this));
 
     if (this.inputs.find(i => i.number === 5)) {
       inputName = this.inputs.find(i => i.number === 5).name;
-    } else {
-      inputName = 'Input 5';
+      this.platform.log.debug('Adding input switch service: ', inputName);
+      this.input5 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input5');
+      this.input5.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
+      this.input5.getCharacteristic(this.platform.Characteristic.On)
+        .onSet(this.setInput5On.bind(this))
+        .onGet(this.getInput5On.bind(this));
     }
-    this.platform.log.debug('Adding input switch service: ', inputName);
-    this.input5 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input5');
-    this.input5.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
-    this.input5.getCharacteristic(this.platform.Characteristic.On)
-      .onSet(this.setInput5On.bind(this))
-      .onGet(this.getInput5On.bind(this));
 
     if (this.inputs.find(i => i.number === 6)) {
       inputName = this.inputs.find(i => i.number === 6).name;
-    } else {
-      inputName = 'Input 6';
+      this.platform.log.debug('Adding input switch service: ', inputName);
+      this.input6 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input6');
+      this.input6.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
+      this.input6.getCharacteristic(this.platform.Characteristic.On)
+        .onSet(this.setInput6On.bind(this))
+        .onGet(this.getInput6On.bind(this));
     }
-    this.platform.log.debug('Adding input switch service: ', inputName);
-    this.input6 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input6');
-    this.input6.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
-    this.input6.getCharacteristic(this.platform.Characteristic.On)
-      .onSet(this.setInput6On.bind(this))
-      .onGet(this.getInput6On.bind(this));
 
     if (this.inputs.find(i => i.number === 7)) {
       inputName = this.inputs.find(i => i.number === 7).name;
-    } else {
-      inputName = 'Input 7';
+      this.platform.log.debug('Adding input switch service: ', inputName);
+      this.input7 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input7');
+      this.input7.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
+      this.input7.getCharacteristic(this.platform.Characteristic.On)
+        .onSet(this.setInput7On.bind(this))
+        .onGet(this.getInput7On.bind(this));
     }
-    this.platform.log.debug('Adding input switch service: ', inputName);
-    this.input7 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input7');
-    this.input7.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
-    this.input7.getCharacteristic(this.platform.Characteristic.On)
-      .onSet(this.setInput7On.bind(this))
-      .onGet(this.getInput7On.bind(this));
 
     if (this.inputs.find(i => i.number === 8)) {
       inputName = this.inputs.find(i => i.number === 8).name;
-    } else {
-      inputName = 'Input 8';
+      this.platform.log.debug('Adding input switch service: ', inputName);
+      this.input8 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input8');
+      this.input8.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
+      this.input8.getCharacteristic(this.platform.Characteristic.On)
+        .onSet(this.setInput8On.bind(this))
+        .onGet(this.getInput8On.bind(this));
     }
-    this.platform.log.debug('Adding input switch service: ', inputName);
-    this.input8 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input8');
-    this.input8.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
-    this.input8.getCharacteristic(this.platform.Characteristic.On)
-      .onSet(this.setInput8On.bind(this))
-      .onGet(this.getInput8On.bind(this));
 
     if (this.inputs.find(i => i.number === 9)) {
       inputName = this.inputs.find(i => i.number === 9).name;
-    } else {
-      inputName = 'Input 9';
+      this.platform.log.debug('Adding input switch service: ', inputName);
+      this.input9 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input9');
+      this.input9.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
+      this.input9.getCharacteristic(this.platform.Characteristic.On)
+        .onSet(this.setInput9On.bind(this))
+        .onGet(this.getInput9On.bind(this));
     }
-    this.platform.log.debug('Adding input switch service: ', inputName);
-    this.input9 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input9');
-    this.input9.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
-    this.input9.getCharacteristic(this.platform.Characteristic.On)
-      .onSet(this.setInput9On.bind(this))
-      .onGet(this.getInput9On.bind(this));
   }
 
   /**
