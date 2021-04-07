@@ -3,7 +3,7 @@ import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
 
 import { NADHomebridgePlatform } from './platform';
 
-//import telnet from 'telnet-client';
+import { Telnet } from 'telnet-rxjs';
 
 /**
  * Platform Accessory
@@ -38,7 +38,10 @@ export class NADPlatformAccessory {
   private NADConnect = {
     Host: this.platform.config.ip,
     Port: parseInt(this.platform.config.port) || 23,
+    Connected: false,
   };
+
+  private client = Telnet.client(this.NADConnect.Host + ':' + this.NADConnect.Port, { rejectUnauthorized: false });
 
   constructor(
     private readonly platform: NADHomebridgePlatform,
@@ -171,6 +174,23 @@ export class NADPlatformAccessory {
         .onSet(this.setInput9On.bind(this))
         .onGet(this.getInput9On.bind(this));
     }
+
+    this.client.subscribe((event) => {
+      this.platform.log.debug('Received event:', event);
+    });
+
+    this.client.data.subscribe((data) => {
+      this.platform.log.debug('Received data:', data);
+    });
+
+    this.client.subscribe(
+      (event) => {
+        this.platform.log.debug('Received event:', event);
+      },
+      (error) => {
+        this.platform.log.error('An error occurred:', error);
+      },
+    );
   }
 
   /**
@@ -185,11 +205,31 @@ export class NADPlatformAccessory {
 
   async getOn(): Promise<CharacteristicValue> {
     // implement your own code to check if the device is on
+
+    this.client.filter((event) => event instanceof Telnet.Event.Connected)
+      .subscribe((event) => {
+        this.platform.log.debug('Event: ', event.timestamp);
+        this.NADConnect.Connected = true;
+        this.client.sendln('Main.Power=?');
+      });
+
+    this.client.data
+      .subscribe((data) => {
+        if (!this.NADConnect.Connected) {
+          return;
+        }
+        this.platform.log.debug('Received data:', data);
+      });
+
+    this.client.connect();
+
     const isOn = this.NADStates.On;
     this.platform.log.debug('Get Characteristic On ->', isOn);
 
     // if you need to return an error to show the device as "Not Responding" in the Home app:
     // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+
+    this.client.disconnect();
 
     return isOn;
   }
@@ -332,5 +372,4 @@ export class NADPlatformAccessory {
     this.NADStates.Volume = value as number;
     this.platform.log.debug('Set Characteristic Volume -> ', value);
   }
-
 }
