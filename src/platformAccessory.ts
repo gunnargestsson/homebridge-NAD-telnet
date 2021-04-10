@@ -218,7 +218,7 @@ export class NADPlatformAccessory {
         if (!this.NADConnect.Connected) {
           return;
         }
-        this.platform.log.debug('Received data:', data);
+        this.platform.log.debug('Received GetOn data:', data);
       });
 
     this.client.connect();
