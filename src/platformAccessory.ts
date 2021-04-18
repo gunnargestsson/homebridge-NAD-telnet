@@ -31,130 +31,12 @@ export class NADPlatformAccessory {
     SelectedInput: 1,
   };
 
-  private connectionparams = {
-    host: this.platform.config.ip,
-    port: parseInt(this.platform.config.port) || 23,
-  };
-
+  private hostPort = this.platform.config.port || 23;
+  private hostConnectionString = 'telnet:' + this.platform.config.ip + ':' + this.hostPort as string;
   private connectedToNAD = false;
   private isSendingQueueToNAD = false;
   private sendQueue: string[] = [];
-  private client = Telnet.client(this.connectionparams.host + ':' + this.connectionparams.port);
-
-  private clientObserver = {
-    next: (event: Event) => {
-      if (event instanceof Telnet.Event.Connecting) {
-        this.platform.log.debug('Connecting to NAD');
-      }
-      if (event instanceof Telnet.Event.Connected) {
-        this.connectedToNAD = true;
-        this.platform.log.debug('Connected to NAD');
-        this.sendQueueToNAD();
-      }
-      if (event instanceof Telnet.Event.Ended) {
-        this.platform.log.debug('Ended connection to NAD');
-      }
-      if (event instanceof Telnet.Event.Ending) {
-        this.platform.log.debug('Ending connection to NAD');
-      }
-      if (event instanceof Telnet.Event.Server) {
-        this.platform.log.debug('Server event from NAD');
-      }
-      if (event instanceof Telnet.Event.Started) {
-        this.platform.log.debug('Started event from NAD');
-      }
-      if (event instanceof Telnet.Event.Starting) {
-        this.platform.log.debug('Starting event from NAD');
-      }
-      if (event instanceof Telnet.Event.ConnectionChange) {
-        this.platform.log.debug('Connection Change from NAD');
-      }
-      if (event instanceof Telnet.Event.Disconnected) {
-        this.connectedToNAD = false;
-        this.platform.log.debug('Disconnected from NAD');
-      }
-      if (event instanceof Telnet.Event.Data) {
-        this.platform.log.debug('data received from NAD', event.data);
-        const NADData = event.data.trim();
-        if (NADData.indexOf('Main.Power=On') === 0) {
-          this.NADStates.On = true;
-          this.power.updateCharacteristic(this.platform.Characteristic.On, true);
-          this.client.disconnect();
-        }
-        if (NADData.indexOf('Main.Power=Off') === 0) {
-          this.NADStates.On = false;
-          this.power.updateCharacteristic(this.platform.Characteristic.On, false);
-          this.client.disconnect();
-        }
-        if (NADData.indexOf('Main.Mute=On') === 0) {
-          this.NADStates.On = true;
-          this.speaker.updateCharacteristic(this.platform.Characteristic.Mute, true);
-          this.client.disconnect();
-        }
-        if (NADData.indexOf('Main.Mute=Off') === 0) {
-          this.NADStates.On = false;
-          this.speaker.updateCharacteristic(this.platform.Characteristic.Mute, false);
-          this.client.disconnect();
-        }
-        if (NADData.indexOf('Main.Volume=') === 0) {
-          const volume = NADData.substr(12);
-          this.platform.log.debug('NAD Volume is:', volume);
-          this.NADStates.Volume = 100 + volume as unknown as number;
-          this.speaker.updateCharacteristic(this.platform.Characteristic.Volume, this.NADStates.Volume);
-          this.client.disconnect();
-        }
-        if (NADData.indexOf('Main.Source=') === 0) {
-          const source = NADData.substr(12);
-          this.platform.log.debug('NAD Source is:', source);
-          this.client.disconnect();
-          this.NADStates.SelectedInput = source as unknown as number;
-          if (typeof this.input1 !== 'undefined') {
-            this.input1.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 1));
-          }
-          if (typeof this.input2 !== 'undefined') {
-            this.input2.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 2));
-          }
-          if (typeof this.input3 !== 'undefined') {
-            this.input3.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 3));
-          }
-          if (typeof this.input4 !== 'undefined') {
-            this.input4.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 4));
-          }
-          if (typeof this.input5 !== 'undefined') {
-            this.input5.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 5));
-          }
-          if (typeof this.input6 !== 'undefined') {
-            this.input6.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 6));
-          }
-          if (typeof this.input7 !== 'undefined') {
-            this.input7.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 7));
-          }
-          if (typeof this.input8 !== 'undefined') {
-            this.input8.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 8));
-          }
-          if (typeof this.input9 !== 'undefined') {
-            this.input9.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 9));
-          }
-        }
-        this.platform.log.debug('Current Send Queue', this.sendQueue);
-        if (this.sendQueue.length > 0) {
-          this.sendQueue.shift();
-        }
-        this.isSendingQueueToNAD = false;
-        this.sendQueueToNAD();
-      }
-      if (event instanceof Telnet.Event.Command) {
-        this.platform.log.debug('command received from NAD', event.command);
-      }
-    },
-    error: (err: string) => {
-      this.platform.log.debug('Error in subscriber');
-      this.platform.log.error(err);
-      this.connectedToNAD = false;
-      this.sendToNAD('Main.Model=?');
-    },
-    complete: () => this.platform.log.debug('Subscription for NAD completed'),
-  };
+  client = Telnet.client(this.hostConnectionString, { rejectUnauthorized: false });
 
   constructor(
     private readonly platform: NADHomebridgePlatform,
@@ -289,7 +171,7 @@ export class NADPlatformAccessory {
 
     this.platform.log.debug('Setting up Observer Client subscription');
     this.client.subscribe(this.clientObserver);
-    this.platform.log.debug('Connecting to NAD:', this.connectionparams.host + ':' + this.connectionparams.port);
+    this.platform.log.debug('Connecting to NAD:', this.hostConnectionString);
     this.client.connect();
 
   }
@@ -300,23 +182,19 @@ export class NADPlatformAccessory {
    */
   async setOn(value: CharacteristicValue) {
     // implement your own code to turn your device on/off
-    this.platform.log.debug('Set Characteristic On ->', value);
+    this.platform.log.debug('Set Power On ->', value);
     if (value as boolean) {
-      this.sendToNAD('Main.Power=On');
+      this.client.sendln('Main.Power=On');
     } else {
-      this.sendToNAD('Main.Power=Off');
+      this.client.sendln('Main.Power=Off');
     }
   }
 
   async getOn(): Promise<CharacteristicValue> {
-    // implement your own code to check if the device is on
     this.sendToNAD('Main.Power=?');
 
     const isOn = this.NADStates.On;
-    this.platform.log.debug('Get Characteristic On ->', isOn);
-
-    // if you need to return an error to show the device as "Not Responding" in the Home app:
-    // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    this.platform.log.debug('Get Power On ->', isOn);
 
     return isOn;
   }
@@ -326,13 +204,13 @@ export class NADPlatformAccessory {
       this.NADStates.SelectedInput = 1;
     }
     this.sendToNAD('Main.Source=' + this.NADStates.SelectedInput);
-    this.platform.log.debug('Set Characteristic On input 1 ->', value);
+    this.platform.log.debug('Set input 1 ->', value);
   }
 
   async getInput1On(): Promise<CharacteristicValue> {
     this.sendToNAD('Main.Source=?');
     const isOn = this.NADStates.SelectedInput === 1;
-    this.platform.log.debug('Get Characteristic On input 1 ->', isOn);
+    this.platform.log.debug('Get input 1 ->', isOn);
     return isOn;
   }
 
@@ -341,13 +219,13 @@ export class NADPlatformAccessory {
       this.NADStates.SelectedInput = 2;
     }
     this.sendToNAD('Main.Source=' + this.NADStates.SelectedInput);
-    this.platform.log.debug('Set Characteristic On input 2 ->', value);
+    this.platform.log.debug('Set input 2 ->', value);
   }
 
   async getInput2On(): Promise<CharacteristicValue> {
     this.sendToNAD('Main.Source=?');
     const isOn = this.NADStates.SelectedInput === 2;
-    this.platform.log.debug('Get Characteristic On input 2 ->', isOn);
+    this.platform.log.debug('Get input 2 ->', isOn);
     return isOn;
   }
 
@@ -356,13 +234,13 @@ export class NADPlatformAccessory {
       this.NADStates.SelectedInput = 3;
     }
     this.sendToNAD('Main.Source=' + this.NADStates.SelectedInput);
-    this.platform.log.debug('Set Characteristic On input 3 ->', value);
+    this.platform.log.debug('Set input 3 ->', value);
   }
 
   async getInput3On(): Promise<CharacteristicValue> {
     this.sendToNAD('Main.Source=?');
     const isOn = this.NADStates.SelectedInput === 3;
-    this.platform.log.debug('Get Characteristic On input 3 ->', isOn);
+    this.platform.log.debug('Get input 3 ->', isOn);
     return isOn;
   }
 
@@ -371,13 +249,13 @@ export class NADPlatformAccessory {
       this.NADStates.SelectedInput = 4;
     }
     this.sendToNAD('Main.Source=' + this.NADStates.SelectedInput);
-    this.platform.log.debug('Set Characteristic On input 4 ->', value);
+    this.platform.log.debug('Set input 4 ->', value);
   }
 
   async getInput4On(): Promise<CharacteristicValue> {
     this.sendToNAD('Main.Source=?');
     const isOn = this.NADStates.SelectedInput === 4;
-    this.platform.log.debug('Get Characteristic On input 4 ->', isOn);
+    this.platform.log.debug('Get input 4 ->', isOn);
     return isOn;
   }
 
@@ -386,13 +264,13 @@ export class NADPlatformAccessory {
       this.NADStates.SelectedInput = 5;
     }
     this.sendToNAD('Main.Source=' + this.NADStates.SelectedInput);
-    this.platform.log.debug('Set Characteristic On input 5 ->', value);
+    this.platform.log.debug('Set input 5 ->', value);
   }
 
   async getInput5On(): Promise<CharacteristicValue> {
     this.sendToNAD('Main.Source=?');
     const isOn = this.NADStates.SelectedInput === 5;
-    this.platform.log.debug('Get Characteristic On input 5 ->', isOn);
+    this.platform.log.debug('Get input 5 ->', isOn);
     return isOn;
   }
 
@@ -401,13 +279,13 @@ export class NADPlatformAccessory {
       this.NADStates.SelectedInput = 6;
     }
     this.sendToNAD('Main.Source=' + this.NADStates.SelectedInput);
-    this.platform.log.debug('Set Characteristic On input 6 ->', value);
+    this.platform.log.debug('Set input 6 ->', value);
   }
 
   async getInput6On(): Promise<CharacteristicValue> {
     this.sendToNAD('Main.Source=?');
     const isOn = this.NADStates.SelectedInput === 6;
-    this.platform.log.debug('Get Characteristic On input 6 ->', isOn);
+    this.platform.log.debug('Get input 6 ->', isOn);
     return isOn;
   }
 
@@ -416,13 +294,13 @@ export class NADPlatformAccessory {
       this.NADStates.SelectedInput = 7;
     }
     this.sendToNAD('Main.Source=' + this.NADStates.SelectedInput);
-    this.platform.log.debug('Set Characteristic On input 7 ->', value);
+    this.platform.log.debug('Set input 7 ->', value);
   }
 
   async getInput7On(): Promise<CharacteristicValue> {
     this.sendToNAD('Main.Source=?');
     const isOn = this.NADStates.SelectedInput === 7;
-    this.platform.log.debug('Get Characteristic On input 7 ->', isOn);
+    this.platform.log.debug('Get input 7 ->', isOn);
     return isOn;
   }
 
@@ -431,13 +309,13 @@ export class NADPlatformAccessory {
       this.NADStates.SelectedInput = 8;
     }
     this.sendToNAD('Main.Source=' + this.NADStates.SelectedInput);
-    this.platform.log.debug('Set Characteristic On input 8 ->', value);
+    this.platform.log.debug('Set input 8 ->', value);
   }
 
   async getInput8On(): Promise<CharacteristicValue> {
     this.sendToNAD('Main.Source=?');
     const isOn = this.NADStates.SelectedInput === 8;
-    this.platform.log.debug('Get Characteristic On input 8 ->', isOn);
+    this.platform.log.debug('Get input 8 ->', isOn);
     return isOn;
   }
 
@@ -446,13 +324,13 @@ export class NADPlatformAccessory {
       this.NADStates.SelectedInput = 9;
     }
     this.sendToNAD('Main.Source=' + this.NADStates.SelectedInput);
-    this.platform.log.debug('Set Characteristic On input 9 ->', value);
+    this.platform.log.debug('Set input 9 ->', value);
   }
 
   async getInput9On(): Promise<CharacteristicValue> {
     this.sendToNAD('Main.Source=?');
     const isOn = this.NADStates.SelectedInput === 9;
-    this.platform.log.debug('Get Characteristic On input 9 ->', isOn);
+    this.platform.log.debug('Get input 9 ->', isOn);
     return isOn;
   }
 
@@ -476,45 +354,156 @@ export class NADPlatformAccessory {
   async getVolume(): Promise<CharacteristicValue> {
     this.sendToNAD('Main.Volume=?');
     const volume = this.NADStates.Volume;
-    this.platform.log.debug('Get Characteristic Volume ->', 100 + volume);
+    this.platform.log.debug('Get Volume ->', 100 + volume);
     return volume;
   }
 
   async setVolume(value: CharacteristicValue) {
     const volume = value as number - 100;
     this.sendToNAD('Main.Volume=' + volume);
-    this.platform.log.debug('Set Characteristic Volume ->', volume);
+    this.platform.log.debug('Set Volume ->', volume);
   }
 
-  async sendToNAD(commandToSend: string) {
-    this.platform.log.debug('NAD Status', this.connectedToNAD, this.client.connected, this.client.socket.writable, this.client.socket.readable);
-    if (!this.connectedToNAD) {
-      this.platform.log.debug('not connected to NAD');
-
-    } else if (!this.client.socket.writable) {
-      this.platform.log.debug('socket not writeable to NAD');
-      this.connectedToNAD = false;
-
-    }
-
-    if (this.sendQueue.includes(commandToSend)) {
-      this.platform.log.debug('Command already in queue', commandToSend, this.sendQueue);
-    } else {
+  sendToNAD(commandToSend: string) {
+    if (!this.sendQueue.includes(commandToSend)) {
       this.platform.log.debug('Adding command to queue', commandToSend);
       this.sendQueue.push(commandToSend);
     }
     this.sendQueueToNAD();
   }
 
-  async sendQueueToNAD() {
-    if (this.connectedToNAD) {
-      if (!this.isSendingQueueToNAD) {
-        if (this.sendQueue.length > 0) {
-          this.isSendingQueueToNAD = true;
-          this.platform.log.debug('Sending command to NAD', this.sendQueue[0]);
-          this.client.sendln(this.sendQueue[0]);
-        }
-      }
+  sendQueueToNAD() {
+    this.platform.log.debug('NAD Status', this.isSendingQueueToNAD, this.connectedToNAD, this.client.connected, this.client.socket.writable, this.client.socket.readable);
+    if (this.client.hasError || this.client.isStopped || this.client.closed) {
+      this.platform.log.debug('Connecting to NAD:', this.hostConnectionString);
+      this.client.connect();
+    } else if (!this.isSendingQueueToNAD && this.sendQueue.length > 0 && this.client.socket.writable) {
+      this.isSendingQueueToNAD = true;
+      this.platform.log.debug('Sending command to NAD', this.sendQueue[0]);
+      this.client.sendln(this.sendQueue[0]);
     }
   }
+
+  HandleNADResponse(NADData: string) {
+    if (NADData.indexOf('Main.Power=On') === 0) {
+      this.NADStates.On = true;
+      this.power.updateCharacteristic(this.platform.Characteristic.On, true);
+      this.client.disconnect();
+    }
+    if (NADData.indexOf('Main.Power=Off') === 0) {
+      this.NADStates.On = false;
+      this.power.updateCharacteristic(this.platform.Characteristic.On, false);
+      this.client.disconnect();
+    }
+    if (NADData.indexOf('Main.Mute=On') === 0) {
+      this.NADStates.On = true;
+      this.speaker.updateCharacteristic(this.platform.Characteristic.Mute, true);
+      this.client.disconnect();
+    }
+    if (NADData.indexOf('Main.Mute=Off') === 0) {
+      this.NADStates.On = false;
+      this.speaker.updateCharacteristic(this.platform.Characteristic.Mute, false);
+      this.client.disconnect();
+    }
+    if (NADData.indexOf('Main.Volume=') === 0) {
+      const volume = NADData.substr(12);
+      this.platform.log.debug('NAD Volume is:', volume);
+      this.NADStates.Volume = 100 + volume as unknown as number;
+      this.speaker.updateCharacteristic(this.platform.Characteristic.Volume, this.NADStates.Volume);
+      this.client.disconnect();
+    }
+    if (NADData.indexOf('Main.Source=') === 0) {
+      const source = NADData.substr(12);
+      this.platform.log.debug('NAD Source is:', source);
+      this.client.disconnect();
+      this.NADStates.SelectedInput = source as unknown as number;
+      if (typeof this.input1 !== 'undefined') {
+        this.input1.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 1));
+      }
+      if (typeof this.input2 !== 'undefined') {
+        this.input2.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 2));
+      }
+      if (typeof this.input3 !== 'undefined') {
+        this.input3.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 3));
+      }
+      if (typeof this.input4 !== 'undefined') {
+        this.input4.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 4));
+      }
+      if (typeof this.input5 !== 'undefined') {
+        this.input5.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 5));
+      }
+      if (typeof this.input6 !== 'undefined') {
+        this.input6.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 6));
+      }
+      if (typeof this.input7 !== 'undefined') {
+        this.input7.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 7));
+      }
+      if (typeof this.input8 !== 'undefined') {
+        this.input8.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 8));
+      }
+      if (typeof this.input9 !== 'undefined') {
+        this.input9.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 9));
+      }
+    }
+    this.platform.log.debug('Current Send Queue', this.sendQueue);
+    if (this.sendQueue.length > 0) {
+      this.sendQueue.shift();
+    }
+    this.isSendingQueueToNAD = false;
+    this.client.disconnect();
+  }
+
+  clientObserver = {
+    next: (event: Event) => {
+      if (event instanceof Telnet.Event.Connecting) {
+        this.platform.log.debug('Connecting to NAD');
+      }
+      if (event instanceof Telnet.Event.Connected) {
+        this.platform.log.debug('Connected to NAD');
+        this.isSendingQueueToNAD = true;
+      }
+      if (event instanceof Telnet.Event.Ended) {
+        this.platform.log.debug('Ended connection to NAD');
+      }
+      if (event instanceof Telnet.Event.Ending) {
+        this.platform.log.debug('Ending connection to NAD');
+      }
+      if (event instanceof Telnet.Event.Server) {
+        this.platform.log.debug('Server event from NAD');
+      }
+      if (event instanceof Telnet.Event.Started) {
+        this.platform.log.debug('Started event from NAD');
+      }
+      if (event instanceof Telnet.Event.Starting) {
+        this.platform.log.debug('Starting event from NAD');
+      }
+      if (event instanceof Telnet.Event.ConnectionChange) {
+        this.platform.log.debug('Connection Change from NAD');
+      }
+      if (event instanceof Telnet.Event.Disconnected) {
+        this.connectedToNAD = false;
+        this.platform.log.debug('Disconnected from NAD');
+        this.sendQueueToNAD();
+      }
+      if (event instanceof Telnet.Event.Data) {
+        this.platform.log.debug('data received from NAD', event.data);
+        if (event.data.indexOf('Main.Model=') === 0) {
+          this.connectedToNAD = true;
+          this.isSendingQueueToNAD = false;
+          this.platform.log.debug('Received confirmation from NAD');
+          this.sendQueueToNAD();
+        }
+      }
+      if (event instanceof Telnet.Event.Command) {
+        this.platform.log.debug('command received from NAD', event.command);
+      }
+    },
+    error: (err: string) => {
+      this.platform.log.error(err);
+      this.connectedToNAD = false;
+      this.isSendingQueueToNAD = false;
+    },
+    complete: () => this.platform.log.debug('Subscription for NAD completed'),
+  };
+
 }
