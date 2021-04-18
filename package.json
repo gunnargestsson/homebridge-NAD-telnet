@@ -2,7 +2,7 @@
   "private": false,
   "displayName": "NAD Amplifier via Telnet",
   "name": "homebridge-nad-telnet",
-  "version": "1.0.34",
+  "version": "1.0.62",
   "description": "Connect to NAD amplifier via Telnet.",
   "license": "Apache-2.0",
   "repository": {
