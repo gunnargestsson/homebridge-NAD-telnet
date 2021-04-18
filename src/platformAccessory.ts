@@ -488,8 +488,8 @@ export class NADPlatformAccessory {
       if (event instanceof Telnet.Event.Data) {
         this.platform.log.debug('data received from NAD', event.data);
         if (event.data.indexOf('Main.Model=') === 0) {
-          this.connectedToNAD = true;
           this.isSendingQueueToNAD = false;
+          this.connectedToNAD = true;
           this.platform.log.debug('Received confirmation from NAD');
           this.sendQueueToNAD();
         }
@@ -498,11 +498,7 @@ export class NADPlatformAccessory {
         this.platform.log.debug('command received from NAD', event.command);
       }
     },
-    error: (err: string) => {
-      this.platform.log.error(err);
-      this.connectedToNAD = false;
-      this.isSendingQueueToNAD = false;
-    },
+    error: (err: string) => this.platform.log.error(err),
     complete: () => this.platform.log.debug('Subscription for NAD completed'),
   };
 
