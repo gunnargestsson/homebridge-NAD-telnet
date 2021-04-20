@@ -37,45 +37,7 @@ export class NADPlatformAccessory {
   private isSendingQueueToNAD = false;
   private isConnectingToNAD = false;
   private sendQueue: string[] = [];
-  private client = Telnet.client(this.hostConnectionString, { rejectUnauthorized: false });
-
-  private clientObserver = {
-    next: (event: Event) => {
-      if (event instanceof Telnet.Event.Connecting) {
-        this.platform.log.debug('Connecting to NAD');
-      }
-      if (event instanceof Telnet.Event.Connected) {
-        this.platform.log.debug('Connected to NAD');
-        this.connectedToNAD = true;
-        this.isSendingQueueToNAD = false;
-      }
-      if (event instanceof Telnet.Event.ConnectionChange) {
-        this.platform.log.debug('Connection Change from NAD');
-      }
-      if (event instanceof Telnet.Event.Disconnected) {
-        this.connectedToNAD = false;
-        this.isSendingQueueToNAD = false;
-        this.platform.log.debug('Disconnected from NAD');
-      }
-      if (event instanceof Telnet.Event.Data) {
-        this.platform.log.debug('data received from NAD', event.data);
-        if (event.data.indexOf('Main.Model=') === 0) {
-          this.platform.log.debug('Received confirmation from NAD');
-        } else {
-          this.HandleNADResponse(event.data);
-        }
-        this.isSendingQueueToNAD = false;
-        this.sendQueueToNAD();
-      }
-      if (event instanceof Telnet.Event.Command) {
-        this.platform.log.debug('command received from NAD', event.command);
-      }
-    },
-    error: (err: string) => {
-      this.platform.log.error(err);
-    },
-    complete: () => this.platform.log.debug('Subscription for NAD completed'),
-  };
+  //private client = Telnet.client('127.0.0.1:23');
 
   constructor(
     private readonly platform: NADHomebridgePlatform,
@@ -88,12 +50,48 @@ export class NADPlatformAccessory {
       .setCharacteristic(this.platform.Characteristic.Model, this.platform.config.model || 'unknown')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, this.platform.config.serialNumber || 'unknown');
 
+    const clientObserver = {
+      next: (event: Event) => {
+        if (event instanceof Telnet.Event.Connecting) {
+          this.platform.log.debug('Connecting to NAD');
+        }
+        if (event instanceof Telnet.Event.Connected) {
+          this.platform.log.debug('Connected to NAD');
+          this.connectedToNAD = true;
+          this.isSendingQueueToNAD = false;
+        }
+        if (event instanceof Telnet.Event.Disconnected) {
+          this.connectedToNAD = false;
+          this.isSendingQueueToNAD = false;
+          this.platform.log.debug('Disconnected from NAD');
+        }
+        if (event instanceof Telnet.Event.Data) {
+          this.platform.log.debug('data received from NAD', event.data);
+          if (event.data.indexOf('Main.Model=') === 0) {
+            this.platform.log.debug('Received confirmation from NAD');
+          } else {
+            this.HandleNADResponse(event.data);
+          }
+          this.isSendingQueueToNAD = false;
+          this.sendQueueToNAD();
+        }
+        if (event instanceof Telnet.Event.Command) {
+          this.platform.log.debug('command received from NAD', event.command);
+        }
+      },
+      error: (err: string) => {
+        this.platform.log.error(err);
+      },
+      complete: () => this.platform.log.debug('Subscription for NAD completed'),
+    };
+
+    const client = Telnet.client(this.hostConnectionString, { rejectUnauthorized: false });
     this.platform.log.debug('Setting up Observer Client subscription');
-    this.client.subscribe(this.clientObserver);
+    client.subscribe(clientObserver);
     this.platform.log.debug('Connecting to NAD:', this.hostConnectionString);
-    this.client.connect();
+    client.connect();
     this.platform.log.debug('Sending model query');
-    this.client.sendln('Main.Model=?');
+    client.sendln('Main.Model=?');
 
     this.platform.log.debug('Adding power switch service');
     // get the Switch service if it exists, otherwise create a new Switch service
@@ -415,7 +413,7 @@ export class NADPlatformAccessory {
   }
 
   async sendQueueToNAD() {
-    this.ConnectToNAD();
+    //this.ConnectToNAD();
     if (this.connectedToNAD && !this.isSendingQueueToNAD) {
       this.isSendingQueueToNAD = true;
       this.platform.log.debug('Sending command to NAD', this.sendQueue[0]);
@@ -424,7 +422,7 @@ export class NADPlatformAccessory {
       this.platform.log.debug('Not able to send command, status incorrect', this.connectedToNAD, this.isSendingQueueToNAD);
     }
   }
-
+  /*
   async ConnectToNAD() {
     this.platform.log.debug('Telnet is in sending queue', this.isSendingQueueToNAD);
     this.platform.log.debug('Telnet is connected', this.connectedToNAD);
@@ -457,6 +455,7 @@ export class NADPlatformAccessory {
       this.isConnectingToNAD = false;
     }
   }
+ */
 
   async HandleNADResponse(NADData: string) {
     if (NADData.indexOf('Main.Power=On') === 0) {
