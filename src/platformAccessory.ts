@@ -12,7 +12,7 @@ import { Event, Telnet } from 'telnet-rxjs';
  */
 export class NADPlatformAccessory {
   private power: Service;
-  private speaker: Service;
+  //private speaker: Service;
   private input1: Service | undefined;
   private input2: Service | undefined;
   private input3: Service | undefined;
@@ -35,18 +35,65 @@ export class NADPlatformAccessory {
   private hostConnectionString = 'telnet:' + this.platform.config.ip + ':' + this.hostPort as string;
   private connectedToNAD = false;
   private isSendingQueueToNAD = false;
+  private isConnectingToNAD = false;
   private sendQueue: string[] = [];
-  client = Telnet.client(this.hostConnectionString, { rejectUnauthorized: false });
+  private client = Telnet.client(this.hostConnectionString, { rejectUnauthorized: false });
+
+  private clientObserver = {
+    next: (event: Event) => {
+      if (event instanceof Telnet.Event.Connecting) {
+        this.platform.log.debug('Connecting to NAD');
+      }
+      if (event instanceof Telnet.Event.Connected) {
+        this.platform.log.debug('Connected to NAD');
+        this.connectedToNAD = true;
+        this.isSendingQueueToNAD = false;
+      }
+      if (event instanceof Telnet.Event.ConnectionChange) {
+        this.platform.log.debug('Connection Change from NAD');
+      }
+      if (event instanceof Telnet.Event.Disconnected) {
+        this.connectedToNAD = false;
+        this.isSendingQueueToNAD = false;
+        this.platform.log.debug('Disconnected from NAD');
+      }
+      if (event instanceof Telnet.Event.Data) {
+        this.platform.log.debug('data received from NAD', event.data);
+        if (event.data.indexOf('Main.Model=') === 0) {
+          this.platform.log.debug('Received confirmation from NAD');
+        } else {
+          this.HandleNADResponse(event.data);
+        }
+        this.isSendingQueueToNAD = false;
+        this.sendQueueToNAD();
+      }
+      if (event instanceof Telnet.Event.Command) {
+        this.platform.log.debug('command received from NAD', event.command);
+      }
+    },
+    error: (err: string) => {
+      this.platform.log.error(err);
+    },
+    complete: () => this.platform.log.debug('Subscription for NAD completed'),
+  };
 
   constructor(
     private readonly platform: NADHomebridgePlatform,
     private readonly accessory: PlatformAccessory,
   ) {
+
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'NAD Electronics')
       .setCharacteristic(this.platform.Characteristic.Model, this.platform.config.model || 'unknown')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, this.platform.config.serialNumber || 'unknown');
+
+    this.platform.log.debug('Setting up Observer Client subscription');
+    this.client.subscribe(this.clientObserver);
+    this.platform.log.debug('Connecting to NAD:', this.hostConnectionString);
+    this.client.connect();
+    this.platform.log.debug('Sending model query');
+    this.client.sendln('Main.Model=?');
 
     this.platform.log.debug('Adding power switch service');
     // get the Switch service if it exists, otherwise create a new Switch service
@@ -65,6 +112,7 @@ export class NADPlatformAccessory {
       .onSet(this.setOn.bind(this))
       .onGet(this.getOn.bind(this));
 
+    /*
     this.platform.log.debug('Adding speaker service');
     this.speaker = this.accessory.getService('Speakers') || this.accessory.addService(this.platform.Service.Speaker, 'Speakers');
     this.speaker.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' Speakers');
@@ -75,14 +123,14 @@ export class NADPlatformAccessory {
     this.speaker.getCharacteristic(this.platform.Characteristic.Volume)
       .onSet(this.setVolume.bind(this))
       .onGet(this.getVolume.bind(this));
-
+ */
     this.platform.log.debug('configured inputs:', this.platform.config.inputs);
     let inputName = '';
 
     if (this.inputs.find(i => i.number === 1)) {
       inputName = this.inputs.find(i => i.number === 1).name;
       this.platform.log.debug('Adding input switch service:', inputName);
-      this.input1 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input1');
+      this.input1 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'NADinput1');
       this.input1.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
       this.input1.getCharacteristic(this.platform.Characteristic.On)
         .onSet(this.setInput1On.bind(this))
@@ -92,7 +140,7 @@ export class NADPlatformAccessory {
     if (this.inputs.find(i => i.number === 2)) {
       inputName = this.inputs.find(i => i.number === 2).name;
       this.platform.log.debug('Adding input switch service:', inputName);
-      this.input2 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input2');
+      this.input2 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'NADinput2');
       this.input2.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
       this.input2.getCharacteristic(this.platform.Characteristic.On)
         .onSet(this.setInput2On.bind(this))
@@ -102,7 +150,7 @@ export class NADPlatformAccessory {
     if (this.inputs.find(i => i.number === 3)) {
       inputName = this.inputs.find(i => i.number === 3).name;
       this.platform.log.debug('Adding input switch service:', inputName);
-      this.input3 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input3');
+      this.input3 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'NADinput3');
       this.input3.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
       this.input3.getCharacteristic(this.platform.Characteristic.On)
         .onSet(this.setInput3On.bind(this))
@@ -112,7 +160,7 @@ export class NADPlatformAccessory {
     if (this.inputs.find(i => i.number === 4)) {
       inputName = this.inputs.find(i => i.number === 4).name;
       this.platform.log.debug('Adding input switch service:', inputName);
-      this.input4 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input4');
+      this.input4 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'NADinput4');
       this.input4.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
       this.input4.getCharacteristic(this.platform.Characteristic.On)
         .onSet(this.setInput4On.bind(this))
@@ -122,7 +170,7 @@ export class NADPlatformAccessory {
     if (this.inputs.find(i => i.number === 5)) {
       inputName = this.inputs.find(i => i.number === 5).name;
       this.platform.log.debug('Adding input switch service:', inputName);
-      this.input5 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input5');
+      this.input5 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'NADinput5');
       this.input5.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
       this.input5.getCharacteristic(this.platform.Characteristic.On)
         .onSet(this.setInput5On.bind(this))
@@ -132,7 +180,7 @@ export class NADPlatformAccessory {
     if (this.inputs.find(i => i.number === 6)) {
       inputName = this.inputs.find(i => i.number === 6).name;
       this.platform.log.debug('Adding input switch service:', inputName);
-      this.input6 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input6');
+      this.input6 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'NADinput6');
       this.input6.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
       this.input6.getCharacteristic(this.platform.Characteristic.On)
         .onSet(this.setInput6On.bind(this))
@@ -142,7 +190,7 @@ export class NADPlatformAccessory {
     if (this.inputs.find(i => i.number === 7)) {
       inputName = this.inputs.find(i => i.number === 7).name;
       this.platform.log.debug('Adding input switch service:', inputName);
-      this.input7 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input7');
+      this.input7 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'NADinput7');
       this.input7.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
       this.input7.getCharacteristic(this.platform.Characteristic.On)
         .onSet(this.setInput7On.bind(this))
@@ -152,7 +200,7 @@ export class NADPlatformAccessory {
     if (this.inputs.find(i => i.number === 8)) {
       inputName = this.inputs.find(i => i.number === 8).name;
       this.platform.log.debug('Adding input switch service:', inputName);
-      this.input8 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input8');
+      this.input8 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'NADinput8');
       this.input8.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
       this.input8.getCharacteristic(this.platform.Characteristic.On)
         .onSet(this.setInput8On.bind(this))
@@ -162,40 +210,34 @@ export class NADPlatformAccessory {
     if (this.inputs.find(i => i.number === 9)) {
       inputName = this.inputs.find(i => i.number === 9).name;
       this.platform.log.debug('Adding input switch service:', inputName);
-      this.input9 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'input9');
+      this.input9 = this.accessory.addService(this.platform.Service.Switch, (this.platform.config.model || 'NAD') + ' ' + inputName, 'NADinput9');
       this.input9.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.model || 'NAD') + ' ' + inputName);
       this.input9.getCharacteristic(this.platform.Characteristic.On)
         .onSet(this.setInput9On.bind(this))
         .onGet(this.getInput9On.bind(this));
     }
-
-    this.platform.log.debug('Setting up Observer Client subscription');
-    this.client.subscribe(this.clientObserver);
-    this.platform.log.debug('Connecting to NAD:', this.hostConnectionString);
-    this.client.connect();
-
   }
 
   /**
    * Handle "SET" requests from HomeKit
    * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
    */
+
   async setOn(value: CharacteristicValue) {
     // implement your own code to turn your device on/off
+
     this.platform.log.debug('Set Power On ->', value);
     if (value as boolean) {
-      this.client.sendln('Main.Power=On');
+      this.sendToNAD('Main.Power=On');
     } else {
-      this.client.sendln('Main.Power=Off');
+      this.sendToNAD('Main.Power=?');
     }
   }
 
   async getOn(): Promise<CharacteristicValue> {
-    this.sendToNAD('Main.Power=?');
-
     const isOn = this.NADStates.On;
     this.platform.log.debug('Get Power On ->', isOn);
-
+    //this.sendToNAD('Main.Power=?');
     return isOn;
   }
 
@@ -364,7 +406,7 @@ export class NADPlatformAccessory {
     this.platform.log.debug('Set Volume ->', volume);
   }
 
-  sendToNAD(commandToSend: string) {
+  async sendToNAD(commandToSend: string) {
     if (!this.sendQueue.includes(commandToSend)) {
       this.platform.log.debug('Adding command to queue', commandToSend);
       this.sendQueue.push(commandToSend);
@@ -372,50 +414,76 @@ export class NADPlatformAccessory {
     this.sendQueueToNAD();
   }
 
-  sendQueueToNAD() {
-    this.platform.log.debug('NAD Status', this.isSendingQueueToNAD, this.connectedToNAD, this.client.connected, this.client.socket.writable, this.client.socket.readable);
-    if (this.client.hasError || this.client.isStopped || this.client.closed) {
-      this.platform.log.debug('Connecting to NAD:', this.hostConnectionString);
-      this.client.connect();
-    } else if (!this.isSendingQueueToNAD && this.sendQueue.length > 0 && this.client.socket.writable) {
+  async sendQueueToNAD() {
+    this.ConnectToNAD();
+    if (this.connectedToNAD && !this.isSendingQueueToNAD) {
       this.isSendingQueueToNAD = true;
       this.platform.log.debug('Sending command to NAD', this.sendQueue[0]);
-      this.client.sendln(this.sendQueue[0]);
+      //this.client.sendln(this.sendQueue[0]);
+    } else {
+      this.platform.log.debug('Not able to send command, status incorrect', this.connectedToNAD, this.isSendingQueueToNAD);
     }
   }
 
-  HandleNADResponse(NADData: string) {
+  async ConnectToNAD() {
+    this.platform.log.debug('Telnet is in sending queue', this.isSendingQueueToNAD);
+    this.platform.log.debug('Telnet is connected', this.connectedToNAD);
+    this.platform.log.debug('Telnet Client connected', this.client.connected);
+    this.platform.log.debug('Telnet Client socket writable', this.client.socket.writable);
+    this.platform.log.debug('Telnet Client socket readable', this.client.socket.readable);
+    this.platform.log.debug('Telnet Client Closed', this.client.closed);
+    this.platform.log.debug('Telnet Client HasError', this.client.hasError);
+    this.platform.log.debug('Telnet Client IsStopped', this.client.isStopped);
+    this.platform.log.debug('Telnet observers', this.client.observers);
+    this.platform.log.debug('Is Connecting', this.isConnectingToNAD);
+    this.isConnectingToNAD = true;
+    if (!this.isConnectingToNAD) {
+      this.isConnectingToNAD = true;
+      if (!this.client.connected || !this.connectedToNAD) {
+        this.platform.log.debug('Connecting to NAD:', this.hostConnectionString);
+        this.client.connect();
+        //this.client.sendln('Main.Model=?');
+      } else if (!this.client.socket.writable) {
+        this.platform.log.debug('Disconnecting from NAD:', this.hostConnectionString);
+        this.connectedToNAD = false;
+        this.client.disconnect();
+        this.client.unsubscribe();
+        this.platform.log.debug('Setting up Observer Client subscription');
+        this.client.subscribe(this.clientObserver);
+        this.platform.log.debug('Connecting to NAD:', this.hostConnectionString);
+        this.client.connect();
+        //this.client.sendln('Main.Model=?');
+      }
+      this.isConnectingToNAD = false;
+    }
+  }
+
+  async HandleNADResponse(NADData: string) {
     if (NADData.indexOf('Main.Power=On') === 0) {
       this.NADStates.On = true;
       this.power.updateCharacteristic(this.platform.Characteristic.On, true);
-      this.client.disconnect();
     }
     if (NADData.indexOf('Main.Power=Off') === 0) {
       this.NADStates.On = false;
       this.power.updateCharacteristic(this.platform.Characteristic.On, false);
-      this.client.disconnect();
     }
-    if (NADData.indexOf('Main.Mute=On') === 0) {
+    /* if (NADData.indexOf('Main.Mute=On') === 0) {
       this.NADStates.On = true;
       this.speaker.updateCharacteristic(this.platform.Characteristic.Mute, true);
-      this.client.disconnect();
     }
     if (NADData.indexOf('Main.Mute=Off') === 0) {
       this.NADStates.On = false;
       this.speaker.updateCharacteristic(this.platform.Characteristic.Mute, false);
-      this.client.disconnect();
     }
     if (NADData.indexOf('Main.Volume=') === 0) {
       const volume = NADData.substr(12);
       this.platform.log.debug('NAD Volume is:', volume);
       this.NADStates.Volume = 100 + volume as unknown as number;
       this.speaker.updateCharacteristic(this.platform.Characteristic.Volume, this.NADStates.Volume);
-      this.client.disconnect();
-    }
+    } */
     if (NADData.indexOf('Main.Source=') === 0) {
       const source = NADData.substr(12);
       this.platform.log.debug('NAD Source is:', source);
-      this.client.disconnect();
       this.NADStates.SelectedInput = source as unknown as number;
       if (typeof this.input1 !== 'undefined') {
         this.input1.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 1));
@@ -446,60 +514,12 @@ export class NADPlatformAccessory {
       }
     }
     this.platform.log.debug('Current Send Queue', this.sendQueue);
-    if (this.sendQueue.length > 0) {
-      this.sendQueue.shift();
-    }
-    this.isSendingQueueToNAD = false;
-    this.client.disconnect();
+    //if (this.sendQueue.length > 0) {
+    //  this.sendQueue.shift();
+    //}
   }
 
-  clientObserver = {
-    next: (event: Event) => {
-      if (event instanceof Telnet.Event.Connecting) {
-        this.platform.log.debug('Connecting to NAD');
-      }
-      if (event instanceof Telnet.Event.Connected) {
-        this.platform.log.debug('Connected to NAD');
-        this.isSendingQueueToNAD = true;
-      }
-      if (event instanceof Telnet.Event.Ended) {
-        this.platform.log.debug('Ended connection to NAD');
-      }
-      if (event instanceof Telnet.Event.Ending) {
-        this.platform.log.debug('Ending connection to NAD');
-      }
-      if (event instanceof Telnet.Event.Server) {
-        this.platform.log.debug('Server event from NAD');
-      }
-      if (event instanceof Telnet.Event.Started) {
-        this.platform.log.debug('Started event from NAD');
-      }
-      if (event instanceof Telnet.Event.Starting) {
-        this.platform.log.debug('Starting event from NAD');
-      }
-      if (event instanceof Telnet.Event.ConnectionChange) {
-        this.platform.log.debug('Connection Change from NAD');
-      }
-      if (event instanceof Telnet.Event.Disconnected) {
-        this.connectedToNAD = false;
-        this.platform.log.debug('Disconnected from NAD');
-        this.sendQueueToNAD();
-      }
-      if (event instanceof Telnet.Event.Data) {
-        this.platform.log.debug('data received from NAD', event.data);
-        if (event.data.indexOf('Main.Model=') === 0) {
-          this.isSendingQueueToNAD = false;
-          this.connectedToNAD = true;
-          this.platform.log.debug('Received confirmation from NAD');
-          this.sendQueueToNAD();
-        }
-      }
-      if (event instanceof Telnet.Event.Command) {
-        this.platform.log.debug('command received from NAD', event.command);
-      }
-    },
-    error: (err: string) => this.platform.log.error(err),
-    complete: () => this.platform.log.debug('Subscription for NAD completed'),
-  };
-
+  private delay(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 }
