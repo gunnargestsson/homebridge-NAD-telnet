@@ -20,6 +20,7 @@ export class NADHomebridgePlatform implements DynamicPlatformPlugin {
     public readonly config: PlatformConfig,
     public readonly api: API,
   ) {
+
     this.log.debug('Finished initializing platform:', this.config.name);
 
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
@@ -60,6 +61,11 @@ export class NADHomebridgePlatform implements DynamicPlatformPlugin {
         NADDisplayName: 'NAD Amplifier',
       },
     ];
+
+    for (const existingAccessory of this.accessories) {
+      this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [existingAccessory]);
+      this.log.info('Removing existing accessory from cache:', existingAccessory.displayName);
+    }
 
     // loop over the discovered devices and register each one if it has not already been registered
     for (const device of NADDevices) {
