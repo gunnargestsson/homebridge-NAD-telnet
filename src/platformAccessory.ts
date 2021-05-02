@@ -48,7 +48,7 @@ export class NADPlatformAccessory {
     this.platform.log.debug('Adding power switch service');
     // get the Switch service if it exists, otherwise create a new Switch service
     // you can create multiple services for each accessory
-    this.power = this.accessory.getService('Power') || this.accessory.addService(this.platform.Service.Switch, 'Power');
+    this.power = this.accessory.getService('Power') || this.accessory.addService(this.platform.Service.Lightbulb, 'Power');
 
     // set the service name, this is what is displayed as the default name on the Home app
     // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
@@ -61,6 +61,9 @@ export class NADPlatformAccessory {
     this.power.getCharacteristic(this.platform.Characteristic.On)
       .onSet(this.setOn.bind(this))
       .onGet(this.getOn.bind(this));
+
+    this.power.getCharacteristic(this.platform.Characteristic.Brightness)
+      .onSet(this.setBrightness.bind(this));
 
     this.platform.log.debug('Adding speaker service');
     this.speaker = this.accessory.getService('Speakers') || this.accessory.addService(this.platform.Service.Speaker, 'Speakers');
@@ -354,6 +357,12 @@ export class NADPlatformAccessory {
     this.platform.log.debug('Set Volume ->', volume);
   }
 
+  async setBrightness(value: CharacteristicValue) {
+    const volume: number = value as number - 100;
+    this.sendToNAD('Main.Volume=' + volume);
+    this.platform.log.debug('Set Volume ->', volume);
+  }
+
   async sendToNAD(commandtoSend: string) {
     this.commandQueue.push(commandtoSend);
 
@@ -426,6 +435,7 @@ export class NADPlatformAccessory {
       const givenVolume: number = 100 + this.NADStates.Volume;
       this.platform.log.debug('NAD Volum set to', givenVolume);
       this.speaker.updateCharacteristic(this.platform.Characteristic.Volume, givenVolume);
+      this.power.updateCharacteristic(this.platform.Characteristic.Brightness, givenVolume);
     }
     if (NADData.indexOf('Main.Source=') === 0) {
       const source: number = parseInt(NADData.substr(12));
