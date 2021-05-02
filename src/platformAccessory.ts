@@ -11,7 +11,6 @@ import Telnet from 'telnet-client';
  * Each accessory may expose multiple services of different power types.
  */
 export class NADPlatformAccessory {
-  private power: Service;
   private speaker: Service;
   private input1: Service | undefined;
   private input2: Service | undefined;
@@ -45,26 +44,6 @@ export class NADPlatformAccessory {
       .setCharacteristic(this.platform.Characteristic.Model, this.platform.config.model || 'unknown')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, this.platform.config.serialNumber || 'unknown');
 
-    this.platform.log.debug('Adding power switch service');
-    // get the Switch service if it exists, otherwise create a new Switch service
-    // you can create multiple services for each accessory
-    this.power = this.accessory.getService('Power') || this.accessory.addService(this.platform.Service.Lightbulb, 'Power');
-
-    // set the service name, this is what is displayed as the default name on the Home app
-    // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
-    this.power.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.name || 'NAD') + ' Power');
-
-    // each service must implement at-minimum the "required characteristics" for the given service type
-    // see https://developers.homebridge.io/#/service/Switch
-
-    // register handlers for the On/Off Characteristic
-    this.power.getCharacteristic(this.platform.Characteristic.On)
-      .onSet(this.setOn.bind(this))
-      .onGet(this.getOn.bind(this));
-
-    this.power.getCharacteristic(this.platform.Characteristic.Brightness)
-      .onSet(this.setBrightness.bind(this));
-
     this.platform.log.debug('Adding speaker service');
     this.speaker = this.accessory.getService('Speakers') || this.accessory.addService(this.platform.Service.Speaker, 'Speakers');
     this.speaker.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.name || 'NAD') + ' Speakers');
@@ -82,91 +61,118 @@ export class NADPlatformAccessory {
     if (this.inputs.find(i => i.number === 1)) {
       inputName = this.inputs.find(i => i.number === 1).name;
       this.platform.log.debug('Adding input switch service:', inputName);
-      this.input1 = this.accessory.getService((this.platform.config.name || 'NAD') + ' ' + inputName) || this.accessory.addService(this.platform.Service.Switch, (this.platform.config.name || 'NAD') + ' ' + inputName, 'NADinput1');
+      this.input1 = this.accessory.getService((this.platform.config.name || 'NAD') + ' ' + inputName) || this.accessory.addService(this.platform.Service.Lightbulb, (this.platform.config.name || 'NAD') + ' ' + inputName, 'NADinput1');
       this.input1.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.name || 'NAD') + ' ' + inputName);
       this.input1.getCharacteristic(this.platform.Characteristic.On)
         .onSet(this.setInput1On.bind(this))
         .onGet(this.getInput1On.bind(this));
+      this.input1.getCharacteristic(this.platform.Characteristic.Brightness)
+        .onSet(this.setVolume.bind(this))
+        .onGet(this.getVolume.bind(this));
     }
 
     if (this.inputs.find(i => i.number === 2)) {
       inputName = this.inputs.find(i => i.number === 2).name;
       this.platform.log.debug('Adding input switch service:', inputName);
-      this.input2 = this.accessory.getService((this.platform.config.name || 'NAD') + ' ' + inputName) || this.accessory.addService(this.platform.Service.Switch, (this.platform.config.name || 'NAD') + ' ' + inputName, 'NADinput2');
+      this.input2 = this.accessory.getService((this.platform.config.name || 'NAD') + ' ' + inputName) || this.accessory.addService(this.platform.Service.Lightbulb, (this.platform.config.name || 'NAD') + ' ' + inputName, 'NADinput2');
       this.input2.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.name || 'NAD') + ' ' + inputName);
       this.input2.getCharacteristic(this.platform.Characteristic.On)
         .onSet(this.setInput2On.bind(this))
         .onGet(this.getInput2On.bind(this));
+      this.input2.getCharacteristic(this.platform.Characteristic.Brightness)
+        .onSet(this.setVolume.bind(this))
+        .onGet(this.getVolume.bind(this));
     }
 
     if (this.inputs.find(i => i.number === 3)) {
       inputName = this.inputs.find(i => i.number === 3).name;
       this.platform.log.debug('Adding input switch service:', inputName);
-      this.input3 = this.accessory.getService((this.platform.config.name || 'NAD') + ' ' + inputName) || this.accessory.addService(this.platform.Service.Switch, (this.platform.config.name || 'NAD') + ' ' + inputName, 'NADinput3');
+      this.input3 = this.accessory.getService((this.platform.config.name || 'NAD') + ' ' + inputName) || this.accessory.addService(this.platform.Service.Lightbulb, (this.platform.config.name || 'NAD') + ' ' + inputName, 'NADinput3');
       this.input3.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.name || 'NAD') + ' ' + inputName);
       this.input3.getCharacteristic(this.platform.Characteristic.On)
         .onSet(this.setInput3On.bind(this))
         .onGet(this.getInput3On.bind(this));
+      this.input3.getCharacteristic(this.platform.Characteristic.Brightness)
+        .onSet(this.setVolume.bind(this))
+        .onGet(this.getVolume.bind(this));
     }
 
     if (this.inputs.find(i => i.number === 4)) {
       inputName = this.inputs.find(i => i.number === 4).name;
       this.platform.log.debug('Adding input switch service:', inputName);
-      this.input4 = this.accessory.getService((this.platform.config.name || 'NAD') + ' ' + inputName) || this.accessory.addService(this.platform.Service.Switch, (this.platform.config.name || 'NAD') + ' ' + inputName, 'NADinput4');
+      this.input4 = this.accessory.getService((this.platform.config.name || 'NAD') + ' ' + inputName) || this.accessory.addService(this.platform.Service.Lightbulb, (this.platform.config.name || 'NAD') + ' ' + inputName, 'NADinput4');
       this.input4.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.name || 'NAD') + ' ' + inputName);
       this.input4.getCharacteristic(this.platform.Characteristic.On)
         .onSet(this.setInput4On.bind(this))
         .onGet(this.getInput4On.bind(this));
+      this.input4.getCharacteristic(this.platform.Characteristic.Brightness)
+        .onSet(this.setVolume.bind(this))
+        .onGet(this.getVolume.bind(this));
     }
 
     if (this.inputs.find(i => i.number === 5)) {
       inputName = this.inputs.find(i => i.number === 5).name;
       this.platform.log.debug('Adding input switch service:', inputName);
-      this.input5 = this.accessory.getService((this.platform.config.name || 'NAD') + ' ' + inputName) || this.accessory.addService(this.platform.Service.Switch, (this.platform.config.name || 'NAD') + ' ' + inputName, 'NADinput5');
+      this.input5 = this.accessory.getService((this.platform.config.name || 'NAD') + ' ' + inputName) || this.accessory.addService(this.platform.Service.Lightbulb, (this.platform.config.name || 'NAD') + ' ' + inputName, 'NADinput5');
       this.input5.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.name || 'NAD') + ' ' + inputName);
       this.input5.getCharacteristic(this.platform.Characteristic.On)
         .onSet(this.setInput5On.bind(this))
         .onGet(this.getInput5On.bind(this));
+      this.input5.getCharacteristic(this.platform.Characteristic.Brightness)
+        .onSet(this.setVolume.bind(this))
+        .onGet(this.getVolume.bind(this));
     }
 
     if (this.inputs.find(i => i.number === 6)) {
       inputName = this.inputs.find(i => i.number === 6).name;
       this.platform.log.debug('Adding input switch service:', inputName);
-      this.input6 = this.accessory.getService((this.platform.config.name || 'NAD') + ' ' + inputName) || this.accessory.addService(this.platform.Service.Switch, (this.platform.config.name || 'NAD') + ' ' + inputName, 'NADinput6');
+      this.input6 = this.accessory.getService((this.platform.config.name || 'NAD') + ' ' + inputName) || this.accessory.addService(this.platform.Service.Lightbulb, (this.platform.config.name || 'NAD') + ' ' + inputName, 'NADinput6');
       this.input6.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.name || 'NAD') + ' ' + inputName);
       this.input6.getCharacteristic(this.platform.Characteristic.On)
         .onSet(this.setInput6On.bind(this))
         .onGet(this.getInput6On.bind(this));
+      this.input6.getCharacteristic(this.platform.Characteristic.Brightness)
+        .onSet(this.setVolume.bind(this))
+        .onGet(this.getVolume.bind(this));
     }
 
     if (this.inputs.find(i => i.number === 7)) {
       inputName = this.inputs.find(i => i.number === 7).name;
       this.platform.log.debug('Adding input switch service:', inputName);
-      this.input7 = this.accessory.getService((this.platform.config.name || 'NAD') + ' ' + inputName) || this.accessory.addService(this.platform.Service.Switch, (this.platform.config.name || 'NAD') + ' ' + inputName, 'NADinput7');
+      this.input7 = this.accessory.getService((this.platform.config.name || 'NAD') + ' ' + inputName) || this.accessory.addService(this.platform.Service.Lightbulb, (this.platform.config.name || 'NAD') + ' ' + inputName, 'NADinput7');
       this.input7.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.name || 'NAD') + ' ' + inputName);
       this.input7.getCharacteristic(this.platform.Characteristic.On)
         .onSet(this.setInput7On.bind(this))
         .onGet(this.getInput7On.bind(this));
+      this.input7.getCharacteristic(this.platform.Characteristic.Brightness)
+        .onSet(this.setVolume.bind(this))
+        .onGet(this.getVolume.bind(this));
     }
 
     if (this.inputs.find(i => i.number === 8)) {
       inputName = this.inputs.find(i => i.number === 8).name;
       this.platform.log.debug('Adding input switch service:', inputName);
-      this.input8 = this.accessory.getService((this.platform.config.name || 'NAD') + ' ' + inputName) || this.accessory.addService(this.platform.Service.Switch, (this.platform.config.name || 'NAD') + ' ' + inputName, 'NADinput8');
+      this.input8 = this.accessory.getService((this.platform.config.name || 'NAD') + ' ' + inputName) || this.accessory.addService(this.platform.Service.Lightbulb, (this.platform.config.name || 'NAD') + ' ' + inputName, 'NADinput8');
       this.input8.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.name || 'NAD') + ' ' + inputName);
       this.input8.getCharacteristic(this.platform.Characteristic.On)
         .onSet(this.setInput8On.bind(this))
         .onGet(this.getInput8On.bind(this));
+      this.input8.getCharacteristic(this.platform.Characteristic.Brightness)
+        .onSet(this.setVolume.bind(this))
+        .onGet(this.getVolume.bind(this));
     }
 
     if (this.inputs.find(i => i.number === 9)) {
       inputName = this.inputs.find(i => i.number === 9).name;
       this.platform.log.debug('Adding input switch service:', inputName);
-      this.input9 = this.accessory.getService((this.platform.config.name || 'NAD') + ' ' + inputName) || this.accessory.addService(this.platform.Service.Switch, (this.platform.config.name || 'NAD') + ' ' + inputName, 'NADinput9');
+      this.input9 = this.accessory.getService((this.platform.config.name || 'NAD') + ' ' + inputName) || this.accessory.addService(this.platform.Service.Lightbulb, (this.platform.config.name || 'NAD') + ' ' + inputName, 'NADinput9');
       this.input9.setCharacteristic(this.platform.Characteristic.Name, (this.platform.config.name || 'NAD') + ' ' + inputName);
       this.input9.getCharacteristic(this.platform.Characteristic.On)
         .onSet(this.setInput9On.bind(this))
         .onGet(this.getInput9On.bind(this));
+      this.input9.getCharacteristic(this.platform.Characteristic.Brightness)
+        .onSet(this.setVolume.bind(this))
+        .onGet(this.getVolume.bind(this));
     }
 
   }
@@ -176,155 +182,97 @@ export class NADPlatformAccessory {
    * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
    */
 
-  async setOn(value: CharacteristicValue) {
-    this.platform.log.debug('Set Power On ->', value);
+  async setOn(value: CharacteristicValue, inputNo: number) {
+    if (value as boolean) {
+      this.NADStates.SelectedInput = inputNo;
+    }
     if (value as boolean) {
       this.sendToNAD('Main.Power=On');
     } else {
       this.sendToNAD('Main.Power=Off');
     }
-  }
-
-  async getOn(): Promise<CharacteristicValue> {
-    const isOn = this.NADStates.On;
-    this.platform.log.debug('Get Power On ->', isOn);
-    this.sendToNAD('Main.Power=?');
-    return isOn;
-  }
-
-  async setInput1On(value: CharacteristicValue) {
-    if (value as boolean) {
-      this.NADStates.SelectedInput = 1;
-    }
     this.sendToNAD('Main.Source=' + this.NADStates.SelectedInput);
-    this.platform.log.debug('Set input 1 ->', value);
+    this.platform.log.debug('Set input ', inputNo, value);
   }
 
-  async getInput1On(): Promise<CharacteristicValue> {
+  async getOn(inputNo: number): Promise<CharacteristicValue> {
+    this.sendToNAD('Main.Power=?');
     this.sendToNAD('Main.Source=?');
-    const isOn = this.NADStates.SelectedInput === 1;
+    const isOn = this.NADStates.SelectedInput === inputNo && this.NADStates.On;
     this.platform.log.debug('Get input 1 ->', isOn);
     return isOn;
   }
 
+  async setInput1On(value: CharacteristicValue) {
+    this.setOn(value, 1);
+  }
+
+  async getInput1On(): Promise<CharacteristicValue> {
+    return this.getOn(1);
+  }
+
   async setInput2On(value: CharacteristicValue) {
-    if (value as boolean) {
-      this.NADStates.SelectedInput = 2;
-    }
-    this.sendToNAD('Main.Source=' + this.NADStates.SelectedInput);
-    this.platform.log.debug('Set input 2 ->', value);
+    this.setOn(value, 2);
   }
 
   async getInput2On(): Promise<CharacteristicValue> {
-    this.sendToNAD('Main.Source=?');
-    const isOn = this.NADStates.SelectedInput === 2;
-    this.platform.log.debug('Get input 2 ->', isOn);
-    return isOn;
+    return this.getOn(2);
   }
 
   async setInput3On(value: CharacteristicValue) {
-    if (value as boolean) {
-      this.NADStates.SelectedInput = 3;
-    }
-    this.sendToNAD('Main.Source=' + this.NADStates.SelectedInput);
-    this.platform.log.debug('Set input 3 ->', value);
+    this.setOn(value, 3);
   }
 
   async getInput3On(): Promise<CharacteristicValue> {
-    this.sendToNAD('Main.Source=?');
-    const isOn = this.NADStates.SelectedInput === 3;
-    this.platform.log.debug('Get input 3 ->', isOn);
-    return isOn;
+    return this.getOn(3);
   }
 
   async setInput4On(value: CharacteristicValue) {
-    if (value as boolean) {
-      this.NADStates.SelectedInput = 4;
-    }
-    this.sendToNAD('Main.Source=' + this.NADStates.SelectedInput);
-    this.platform.log.debug('Set input 4 ->', value);
+    this.setOn(value, 4);
   }
 
   async getInput4On(): Promise<CharacteristicValue> {
-    this.sendToNAD('Main.Source=?');
-    const isOn = this.NADStates.SelectedInput === 4;
-    this.platform.log.debug('Get input 4 ->', isOn);
-    return isOn;
+    return this.getOn(4);
   }
 
   async setInput5On(value: CharacteristicValue) {
-    if (value as boolean) {
-      this.NADStates.SelectedInput = 5;
-    }
-    this.sendToNAD('Main.Source=' + this.NADStates.SelectedInput);
-    this.platform.log.debug('Set input 5 ->', value);
+    this.setOn(value, 5);
   }
 
   async getInput5On(): Promise<CharacteristicValue> {
-    this.sendToNAD('Main.Source=?');
-    const isOn = this.NADStates.SelectedInput === 5;
-    this.platform.log.debug('Get input 5 ->', isOn);
-    return isOn;
+    return this.getOn(5);
   }
 
   async setInput6On(value: CharacteristicValue) {
-    if (value as boolean) {
-      this.NADStates.SelectedInput = 6;
-    }
-    this.sendToNAD('Main.Source=' + this.NADStates.SelectedInput);
-    this.platform.log.debug('Set input 6 ->', value);
+    this.setOn(value, 6);
   }
 
   async getInput6On(): Promise<CharacteristicValue> {
-    this.sendToNAD('Main.Source=?');
-    const isOn = this.NADStates.SelectedInput === 6;
-    this.platform.log.debug('Get input 6 ->', isOn);
-    return isOn;
+    return this.getOn(6);
   }
 
   async setInput7On(value: CharacteristicValue) {
-    if (value as boolean) {
-      this.NADStates.SelectedInput = 7;
-    }
-    this.sendToNAD('Main.Source=' + this.NADStates.SelectedInput);
-    this.platform.log.debug('Set input 7 ->', value);
+    this.setOn(value, 7);
   }
 
   async getInput7On(): Promise<CharacteristicValue> {
-    this.sendToNAD('Main.Source=?');
-    const isOn = this.NADStates.SelectedInput === 7;
-    this.platform.log.debug('Get input 7 ->', isOn);
-    return isOn;
+    return this.getOn(7);
   }
 
   async setInput8On(value: CharacteristicValue) {
-    if (value as boolean) {
-      this.NADStates.SelectedInput = 8;
-    }
-    this.sendToNAD('Main.Source=' + this.NADStates.SelectedInput);
-    this.platform.log.debug('Set input 8 ->', value);
+    this.setOn(value, 8);
   }
 
   async getInput8On(): Promise<CharacteristicValue> {
-    this.sendToNAD('Main.Source=?');
-    const isOn = this.NADStates.SelectedInput === 8;
-    this.platform.log.debug('Get input 8 ->', isOn);
-    return isOn;
+    return this.getOn(8);
   }
 
   async setInput9On(value: CharacteristicValue) {
-    if (value as boolean) {
-      this.NADStates.SelectedInput = 9;
-    }
-    this.sendToNAD('Main.Source=' + this.NADStates.SelectedInput);
-    this.platform.log.debug('Set input 9 ->', value);
+    this.setOn(value, 9);
   }
 
   async getInput9On(): Promise<CharacteristicValue> {
-    this.sendToNAD('Main.Source=?');
-    const isOn = this.NADStates.SelectedInput === 9;
-    this.platform.log.debug('Get input 9 ->', isOn);
-    return isOn;
+    return this.getOn(9);
   }
 
   async handleMuteGet() {
@@ -354,12 +302,6 @@ export class NADPlatformAccessory {
   async setVolume(value: CharacteristicValue) {
     const volume: number = value as number - 100;
     this.NADStates.Volume = volume;
-    this.sendToNAD('Main.Volume=' + volume);
-    this.platform.log.debug('Set Volume ->', volume);
-  }
-
-  async setBrightness(value: CharacteristicValue) {
-    const volume: number = value as number - 100;
     this.sendToNAD('Main.Volume=' + volume);
     this.platform.log.debug('Set Volume ->', volume);
   }
@@ -412,14 +354,11 @@ export class NADPlatformAccessory {
   }
 
   HandleNADResponse(NADData: string) {
-    this.platform.log.debug('Evaluating response', NADData);
     if (NADData.indexOf('Main.Power=On') === 0) {
       this.NADStates.On = true;
-      this.power.updateCharacteristic(this.platform.Characteristic.On, true);
     }
     if (NADData.indexOf('Main.Power=Off') === 0) {
       this.NADStates.On = false;
-      this.power.updateCharacteristic(this.platform.Characteristic.On, false);
     }
     if (NADData.indexOf('Main.Mute=On') === 0) {
       this.NADStates.On = true;
@@ -436,48 +375,51 @@ export class NADPlatformAccessory {
       const givenVolume: number = 100 + this.NADStates.Volume;
       this.platform.log.debug('NAD Volum set to', givenVolume);
       this.speaker.updateCharacteristic(this.platform.Characteristic.Volume, givenVolume);
-      this.power.updateCharacteristic(this.platform.Characteristic.Brightness, givenVolume);
     }
+
+    const givenVolume: number = 100 + this.NADStates.Volume;
+
     if (NADData.indexOf('Main.Source=') === 0) {
       const source: number = parseInt(NADData.substr(12));
       this.platform.log.debug('NAD Source is:', source);
       this.NADStates.SelectedInput = source;
-      if (typeof this.input1 !== 'undefined') {
-        this.platform.log.debug('Source 1', (this.NADStates.SelectedInput === 1));
-        this.input1.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 1));
-      }
-      if (typeof this.input2 !== 'undefined') {
-        this.platform.log.debug('Source 2', (this.NADStates.SelectedInput === 2));
-        this.input2.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 2));
-      }
-      if (typeof this.input3 !== 'undefined') {
-        this.platform.log.debug('Source 3', (this.NADStates.SelectedInput === 3));
-        this.input3.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 3));
-      }
-      if (typeof this.input4 !== 'undefined') {
-        this.platform.log.debug('Source 4', (this.NADStates.SelectedInput === 4));
-        this.input4.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 4));
-      }
-      if (typeof this.input5 !== 'undefined') {
-        this.platform.log.debug('Source 5', (this.NADStates.SelectedInput === 5));
-        this.input5.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 5));
-      }
-      if (typeof this.input6 !== 'undefined') {
-        this.platform.log.debug('Source 6', (this.NADStates.SelectedInput === 6));
-        this.input6.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 6));
-      }
-      if (typeof this.input7 !== 'undefined') {
-        this.platform.log.debug('Source 7', (this.NADStates.SelectedInput === 7));
-        this.input7.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 7));
-      }
-      if (typeof this.input8 !== 'undefined') {
-        this.platform.log.debug('Source 8', (this.NADStates.SelectedInput === 8));
-        this.input8.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 8));
-      }
-      if (typeof this.input9 !== 'undefined') {
-        this.platform.log.debug('Source 9', (this.NADStates.SelectedInput === 9));
-        this.input9.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 9));
-      }
+    }
+    if (typeof this.input1 !== 'undefined') {
+      this.input1.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 1) && this.NADStates.On);
+      this.input1.updateCharacteristic(this.platform.Characteristic.Brightness, givenVolume);
+    }
+    if (typeof this.input2 !== 'undefined') {
+      this.input2.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 2) && this.NADStates.On);
+      this.input2.updateCharacteristic(this.platform.Characteristic.Brightness, givenVolume);
+    }
+    if (typeof this.input3 !== 'undefined') {
+      this.input3.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 3) && this.NADStates.On);
+      this.input3.updateCharacteristic(this.platform.Characteristic.Brightness, givenVolume);
+    }
+    if (typeof this.input4 !== 'undefined') {
+      this.input4.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 4) && this.NADStates.On);
+      this.input4.updateCharacteristic(this.platform.Characteristic.Brightness, givenVolume);
+    }
+    if (typeof this.input5 !== 'undefined') {
+      this.input5.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 5) && this.NADStates.On);
+      this.input5.updateCharacteristic(this.platform.Characteristic.Brightness, givenVolume);
+    }
+    if (typeof this.input6 !== 'undefined') {
+      this.input6.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 6) && this.NADStates.On);
+      this.input6.updateCharacteristic(this.platform.Characteristic.Brightness, givenVolume);
+    }
+    if (typeof this.input7 !== 'undefined') {
+      this.platform.log.debug('Source 7', (this.NADStates.SelectedInput === 7));
+      this.input7.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 7) && this.NADStates.On);
+      this.input7.updateCharacteristic(this.platform.Characteristic.Brightness, givenVolume);
+    }
+    if (typeof this.input8 !== 'undefined') {
+      this.input8.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 8) && this.NADStates.On);
+      this.input8.updateCharacteristic(this.platform.Characteristic.Brightness, givenVolume);
+    }
+    if (typeof this.input9 !== 'undefined') {
+      this.input9.updateCharacteristic(this.platform.Characteristic.On, (this.NADStates.SelectedInput === 9) && this.NADStates.On);
+      this.input9.updateCharacteristic(this.platform.Characteristic.Brightness, givenVolume);
     }
   }
 }
