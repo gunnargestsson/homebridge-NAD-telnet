@@ -353,6 +353,7 @@ export class NADPlatformAccessory {
 
   async setVolume(value: CharacteristicValue) {
     const volume: number = value as number - 100;
+    this.NADStates.Volume = volume;
     this.sendToNAD('Main.Volume=' + volume);
     this.platform.log.debug('Set Volume ->', volume);
   }
