@@ -324,12 +324,12 @@ export class NADPlatformAccessory {
       this.queueInProcess = true;
       try {
         await this.processQueue();
-        noOfTries = 1;
       } catch(error) {
         this.platform.log.error('queue error:', error);
         this.connection.destroy();
         this.connected = false;
         if (noOfTries < 5) {
+          this.queueInProcess = false;
           await this.TrySendToNAD(commandtoSend, noOfTries + 1);
         }
       } finally {
