@@ -42,7 +42,7 @@ export class NADPlatformAccessory {
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'NAD Electronics')
-      .setCharacteristic(this.platform.Characteristic.Model, this.platform.config.model || 'unknown')
+      .setCharacteristic(this.platform.Characteristic.Model, this.platform.config.model || 'T777')
       .setCharacteristic(this.platform.Characteristic.SerialNumber, this.platform.config.serialNumber || 'unknown');
 
     this.platform.log.debug('Adding speaker service');
@@ -363,7 +363,7 @@ export class NADPlatformAccessory {
       host: this.platform.config.ip,
       port: this.platform.config.port || 23,
       shellPrompt: 'Main.Model=' + this.platform.config.model,
-      timeout: 3000,
+      timeout: 1000,
     };
 
     this.platform.log.debug('connection to ', params.host);
