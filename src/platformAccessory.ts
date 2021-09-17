@@ -397,7 +397,7 @@ export class NADPlatformAccessory {
       this.platform.log.debug('NAD Volume is:', volume);
       this.NADStates.Volume = volume as unknown as number;
       const givenVolume: number = 100 + this.NADStates.Volume;
-      this.platform.log.debug('NAD Volum set to', givenVolume);
+      this.platform.log.debug('NAD Volume set to', givenVolume);
       this.speaker.updateCharacteristic(this.platform.Characteristic.Volume, givenVolume);
     }
     if (NADData.indexOf('Main.Source=') === 0) {
