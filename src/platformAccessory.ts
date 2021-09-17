@@ -188,8 +188,6 @@ export class NADPlatformAccessory {
     if (value as boolean) {
       this.NADStates.SelectedInput = inputNo;
     }
-    this.updateInputStatus();
-
     if (value as boolean) {
       this.sendToNAD('Main.Power=On');
     } else {
@@ -201,11 +199,18 @@ export class NADPlatformAccessory {
   }
 
   async getOn(inputNo: number): Promise<CharacteristicValue> {
-    this.sendToNAD('Main.Power=?');
-    this.sendToNAD('Main.Source=?');
-    this.updateInputStatus();
     const isOn = this.NADStates.SelectedInput === inputNo && this.NADStates.On;
-    this.platform.log.debug('Get input 1 ->', isOn);
+    if (this.commandQueue.some(x => x === 'Main.Power=?')) {
+      this.platform.log.debug('Power query already queued', inputNo, isOn);
+    } else {
+      this.sendToNAD('Main.Power=?');
+    }
+    if (this.commandQueue.some(x => x === 'Main.Source=?')) {
+      this.platform.log.debug('Source query already queued', inputNo, isOn);
+    } else {
+      this.sendToNAD('Main.Source=?');
+      this.platform.log.debug('Get input ', inputNo, isOn);
+    }
     return isOn;
   }
 
@@ -282,9 +287,13 @@ export class NADPlatformAccessory {
   }
 
   async handleMuteGet() {
-    this.sendToNAD('Main.Mute=?');
     const currentValue = this.NADStates.Mute;
-    this.platform.log.debug('Triggered GET Mute', currentValue);
+    if (this.commandQueue.some(x => x === 'Main.Mute=?')) {
+      this.platform.log.debug('Mute query already queued', currentValue);
+    } else {
+      this.sendToNAD('Main.Mute=?');
+      this.platform.log.debug('Triggered GET Mute', currentValue);
+    }
     return currentValue;
   }
 
@@ -299,16 +308,19 @@ export class NADPlatformAccessory {
   }
 
   async getVolume(): Promise<CharacteristicValue> {
-    this.sendToNAD('Main.Volume=?');
     const volume: number = this.NADStates.Volume + 100;
-    this.platform.log.debug('Get Volume ->', volume);
+    if (this.commandQueue.some(x => x === 'Main.Volume=?')) {
+      this.platform.log.debug('Volume query already queued');
+    } else {
+      this.platform.log.debug('Get Volume ->', volume);
+      this.sendToNAD('Main.Volume=?');
+    }
     return volume;
   }
 
   async setVolume(value: CharacteristicValue) {
     const volume: number = value as number - 100;
     this.NADStates.Volume = volume;
-    this.updateInputStatus();
     this.sendToNAD('Main.Volume=' + volume);
     this.platform.log.debug('Set Volume ->', volume);
   }
